@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Škoda Human Touch 線上測驗系統</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<style>
+  :root {
+    --skoda-dark: #0E3A2F;
+    --skoda-darker: #072820;
+    --skoda-mint: #78FAAE;
+    --skoda-mint-soft: #a8fcc9;
+    --skoda-accent: #FFB94F;
+    --skoda-cream: #F4F1E8;
+    --skoda-red: #E85D5D;
+    --ink: #0a1e19;
+    --muted: #5a6b66;
+    --border: rgba(14, 58, 47, 0.12);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    font-family: "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Helvetica Neue", sans-serif;
+    background: var(--skoda-cream);
+    color: var(--ink);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.01em;
+  }
+
+  /* Decorative background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(800px 400px at 10% -10%, rgba(120, 250, 174, 0.18), transparent 60%),
+      radial-gradient(600px 300px at 110% 110%, rgba(14, 58, 47, 0.08), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .app { position: relative; z-index: 1; min-height: 100vh; }
+
+  /* ========== SCREEN: QR / Landing ========== */
+  .screen { display: none; animation: fadeIn 0.5s ease; }
+  .screen.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ---- Landing (QR) ---- */
+  .landing {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    background: var(--skoda-dark);
+    color: var(--skoda-cream);
+  }
+
+  .landing-left {
+    padding: 60px 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .landing-left::after {
+    content: "";
+    position: absolute;
+    right: -80px;
+    bottom: -80px;
+    width: 320px;
+    height: 320px;
+    border: 1px solid rgba(120, 250, 174, 0.15);
+    border-radius: 50%;
+  }
+  .landing-left::before {
+    content: "";
+    position: absolute;
+    right: -40px;
+    bottom: -40px;
+    width: 240px;
+    height: 240px;
+    border: 1px solid rgba(120, 250, 174, 0.1);
+    border-radius: 50%;
+  }
+
+  .brand-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    color: var(--skoda-mint);
+    text-transform: uppercase;
+  }
+  .brand-tag::before {
+    content: "";
+    width: 32px;
+    height: 1px;
+    background: var(--skoda-mint);
+  }
+
+  .landing h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(48px, 6vw, 84px);
+    font-weight: 400;
+    line-height: 1.05;
+    margin: 28px 0 24px;
+    letter-spacing: -0.02em;
+  }
+  .landing h1 .accent { color: var(--skoda-mint); font-style: italic; }
+
+  .landing-sub {
+    font-size: 17px;
+    line-height: 1.7;
+    max-width: 460px;
+    color: rgba(244, 241, 232, 0.75);
+  }
+
+  .landing-meta {
+    display: flex;
+    gap: 48px;
+    margin-top: 40px;
+    position: relative;
+    z-index: 1;
+  }
+  .meta-item .k {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--skoda-mint);
+    text-transform: uppercase;
+  }
+  .meta-item .v {
+    font-family: Georgia, serif;
+    font-size: 28px;
+    margin-top: 4px;
+  }
+
+  .landing-footer {
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    color: rgba(244, 241, 232, 0.4);
+    text-transform: uppercase;
+    position: relative;
+    z-index: 1;
+  }
+
+  .landing-right {
+    background: var(--skoda-cream);
+    color: var(--ink);
+    padding: 60px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .qr-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 36px;
+    box-shadow: 0 40px 80px -40px rgba(14, 58, 47, 0.25);
+    text-align: center;
+    max-width: 380px;
+    width: 100%;
+  }
+
+  .qr-label {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  #qrcode {
+    display: flex;
+    justify-content: center;
+    margin: 0 auto 24px;
+    padding: 16px;
+    background: #fff;
+  }
+  #qrcode img, #qrcode canvas { display: block; }
+
+  .qr-instruction {
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1.6;
+    padding-top: 20px;
+    border-top: 1px dashed var(--border);
+  }
+  .qr-instruction strong { color: var(--skoda-dark); }
+
+  .qr-hint {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 24px;
+    text-align: center;
+    max-width: 380px;
+  }
+
+  .start-direct {
+    margin-top: 28px;
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: underline;
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+  }
+  .start-direct:hover { color: var(--skoda-dark); }
+
+  /* Admin button */
+  .admin-pill {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(14, 58, 47, 0.9);
+    color: var(--skoda-mint);
+    border: 1px solid rgba(120, 250, 174, 0.3);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    z-index: 100;
+    transition: all 0.2s;
+  }
+  .admin-pill:hover { background: var(--skoda-dark); color: #fff; }
+
+  /* ========== SCREEN: Register ========== */
+  .register-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .register-card {
+    background: #fff;
+    max-width: 520px;
+    width: 100%;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 40px 80px -40px rgba(14, 58, 47, 0.25);
+  }
+
+  .register-head {
+    background: var(--skoda-dark);
+    color: var(--skoda-cream);
+    padding: 36px 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .register-head::before {
+    content: "";
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 180px;
+    height: 180px;
+    border: 1px solid rgba(120, 250, 174, 0.15);
+    border-radius: 50%;
+  }
+
+  .register-head .brand-tag { color: var(--skoda-mint); }
+  .register-head h2 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 34px;
+    margin-top: 14px;
+    letter-spacing: -0.01em;
+  }
+  .register-head p {
+    font-size: 14px;
+    color: rgba(244, 241, 232, 0.7);
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+
+  .register-body { padding: 36px 40px 40px; }
+
+  .field { margin-bottom: 22px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .field input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 16px;
+    font-family: inherit;
+    background: #fafaf7;
+    transition: all 0.2s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--skoda-dark);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(120, 250, 174, 0.2);
+  }
+
+  .exam-info {
+    background: var(--skoda-cream);
+    border-left: 3px solid var(--skoda-mint);
+    padding: 16px 20px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--ink);
+  }
+  .exam-info strong { color: var(--skoda-dark); }
+
+  .btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--skoda-dark);
+    color: var(--skoda-mint);
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    letter-spacing: 0.2em;
+    font-weight: 600;
+    text-transform: uppercase;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+  .btn:hover { background: #000; color: #fff; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--skoda-dark);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--skoda-dark); color: #fff; }
+
+  /* ========== SCREEN: Exam ========== */
+  .exam-wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px 60px; }
+
+  .exam-header {
+    background: #fff;
+    border-radius: 6px;
+    padding: 20px 28px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    box-shadow: 0 10px 30px -20px rgba(14, 58, 47, 0.2);
+    border: 1px solid var(--border);
+  }
+
+  .exam-head-left { display: flex; flex-direction: column; gap: 4px; }
+  .exam-head-left .name {
+    font-family: Georgia, serif;
+    font-size: 18px;
+    color: var(--skoda-dark);
+  }
+  .exam-head-left .meta {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  .timer {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--skoda-dark);
+    color: var(--skoda-mint);
+    border-radius: 100px;
+    font-variant-numeric: tabular-nums;
+  }
+  .timer .label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.7;
+  }
+  .timer .time {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .timer.warning { background: var(--skoda-red); color: #fff; }
+
+  .progress-bar-wrap {
+    background: #fff;
+    border-radius: 6px;
+    padding: 18px 28px;
+    margin-bottom: 24px;
+    border: 1px solid var(--border);
+  }
+  .progress-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .progress-info strong { color: var(--skoda-dark); font-size: 16px; }
+  .progress-bar {
+    height: 4px;
+    background: var(--skoda-cream);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--skoda-mint), var(--skoda-dark));
+    transition: width 0.4s ease;
+  }
+
+  .q-card {
+    background: #fff;
+    border-radius: 6px;
+    padding: 36px 40px;
+    border: 1px solid var(--border);
+    box-shadow: 0 20px 40px -30px rgba(14, 58, 47, 0.3);
+  }
+
+  .q-index {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: var(--skoda-dark);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .q-index::before {
+    content: "";
+    width: 24px;
+    height: 2px;
+    background: var(--skoda-mint);
+  }
+
+  .q-text {
+    font-family: Georgia, serif;
+    font-size: 22px;
+    line-height: 1.55;
+    color: var(--ink);
+    margin-bottom: 28px;
+    letter-spacing: -0.005em;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 12px; }
+
+  .option {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 20px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fcfbf7;
+  }
+  .option:hover {
+    border-color: var(--skoda-dark);
+    background: #fff;
+    transform: translateX(4px);
+  }
+  .option.selected {
+    border-color: var(--skoda-dark);
+    background: var(--skoda-dark);
+    color: var(--skoda-cream);
+  }
+  .option.selected .opt-letter {
+    background: var(--skoda-mint);
+    color: var(--skoda-dark);
+  }
+
+  .opt-letter {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--skoda-cream);
+    color: var(--skoda-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 13px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+
+  .opt-text {
+    font-size: 15px;
+    line-height: 1.55;
+    flex: 1;
+  }
+
+  .exam-nav {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 28px;
+  }
+  .exam-nav .btn { width: auto; min-width: 130px; padding: 14px 24px; }
+
+  /* ========== SCREEN: Result ========== */
+  .result-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 50px 20px 60px;
+  }
+
+  .result-card {
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: 0 40px 80px -40px rgba(14, 58, 47, 0.25);
+  }
+
+  .result-head {
+    background: var(--skoda-dark);
+    color: var(--skoda-cream);
+    padding: 48px 40px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-head::before {
+    content: "";
+    position: absolute;
+    top: -100px;
+    left: -100px;
+    width: 300px;
+    height: 300px;
+    border: 1px solid rgba(120, 250, 174, 0.1);
+    border-radius: 50%;
+  }
+  .result-head::after {
+    content: "";
+    position: absolute;
+    bottom: -80px;
+    right: -80px;
+    width: 220px;
+    height: 220px;
+    border: 1px solid rgba(120, 250, 174, 0.15);
+    border-radius: 50%;
+  }
+
+  .result-status {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 11px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+  }
+  .result-status.pass { background: var(--skoda-mint); color: var(--skoda-dark); }
+  .result-status.fail { background: var(--skoda-red); color: #fff; }
+
+  .score-big {
+    font-family: Georgia, serif;
+    font-size: 110px;
+    line-height: 1;
+    margin: 20px 0 8px;
+    color: var(--skoda-mint);
+    position: relative;
+    z-index: 1;
+    letter-spacing: -0.02em;
+  }
+  .score-label {
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(244, 241, 232, 0.7);
+    position: relative;
+    z-index: 1;
+  }
+
+  .result-body { padding: 36px 40px; }
+
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin-bottom: 28px;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .stat {
+    background: #fff;
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .stat .num {
+    font-family: Georgia, serif;
+    font-size: 32px;
+    color: var(--skoda-dark);
+  }
+  .stat .lbl {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .result-info {
+    background: var(--skoda-cream);
+    padding: 18px 22px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--ink);
+    margin-bottom: 24px;
+  }
+  .result-info div { display: flex; justify-content: space-between; }
+  .result-info strong { color: var(--skoda-dark); }
+
+  .result-actions { display: flex; gap: 12px; }
+
+  /* ========== Review ========== */
+  .review-section {
+    margin-top: 32px;
+    padding: 28px 32px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+  }
+  .review-section h3 {
+    font-family: Georgia, serif;
+    font-weight: 400;
+    font-size: 22px;
+    color: var(--skoda-dark);
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .review-item {
+    padding: 16px 0;
+    border-bottom: 1px dashed var(--border);
+  }
+  .review-item:last-child { border-bottom: none; }
+  .review-q {
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+  .review-q .qnum {
+    display: inline-block;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    line-height: 26px;
+    margin-right: 10px;
+  }
+  .review-q.correct .qnum { background: var(--skoda-mint); color: var(--skoda-dark); }
+  .review-q.wrong .qnum { background: var(--skoda-red); color: #fff; }
+
+  .review-ans { font-size: 13px; color: var(--muted); margin-left: 36px; line-height: 1.7; }
+  .review-ans .your { color: var(--skoda-red); }
+  .review-ans .correct-ans { color: var(--skoda-dark); font-weight: 600; }
+  .review-item.correct .review-ans .your { color: var(--skoda-dark); }
+
+  /* ========== SCREEN: Admin ========== */
+  .admin-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 20px 60px;
+  }
+
+  .admin-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .admin-head h1 {
+    font-family: Georgia, serif;
+    font-size: 36px;
+    color: var(--skoda-dark);
+    font-weight: 400;
+  }
+  .admin-head h1 small {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    color: var(--skoda-mint);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    font-family: inherit;
+    color: var(--muted);
+  }
+
+  .admin-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .admin-actions button {
+    padding: 10px 20px;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+  }
+
+  .admin-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .stat-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--skoda-mint);
+  }
+  .stat-card .num {
+    font-family: Georgia, serif;
+    font-size: 40px;
+    color: var(--skoda-dark);
+    line-height: 1;
+  }
+  .stat-card .lbl {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+
+  .results-table {
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .results-table table { width: 100%; border-collapse: collapse; }
+  .results-table th {
+    background: var(--skoda-dark);
+    color: var(--skoda-mint);
+    padding: 14px 18px;
+    text-align: left;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .results-table td {
+    padding: 14px 18px;
+    font-size: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .results-table tr:hover td { background: var(--skoda-cream); }
+
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+  }
+  .pill.pass { background: var(--skoda-mint); color: var(--skoda-dark); }
+  .pill.fail { background: #fde0e0; color: var(--skoda-red); }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+  }
+  .empty-state .big {
+    font-family: Georgia, serif;
+    font-size: 48px;
+    color: var(--border);
+    margin-bottom: 10px;
+  }
+
+  /* ========== PRINT ========== */
+  @media print {
+    body { background: #fff; }
+    body::before { display: none; }
+    .admin-pill, .admin-actions, .result-actions, .exam-nav { display: none !important; }
+    .stat-card, .results-table, .result-card, .review-section {
+      box-shadow: none !important;
+      break-inside: avoid;
+    }
+    .admin-wrap { padding: 20px; }
+    .admin-head h1 { font-size: 24px; }
+    @page { margin: 1.5cm; size: A4; }
+    .results-table th { background: #0E3A2F !important; color: #78FAAE !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .stat-card::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* ========== Responsive ========== */
+  @media (max-width: 840px) {
+    .landing { grid-template-columns: 1fr; }
+    .landing-left { padding: 40px 28px; }
+    .landing-right { padding: 40px 28px; }
+    .landing-meta { flex-wrap: wrap; gap: 24px; }
+    .admin-stats { grid-template-columns: repeat(2, 1fr); }
+    .q-card { padding: 24px 22px; }
+    .q-text { font-size: 18px; }
+    .register-body, .register-head { padding: 28px 24px; }
+    .exam-header { flex-direction: column; align-items: flex-start; }
+  }
+
+  @media (max-width: 520px) {
+    .admin-stats { grid-template-columns: 1fr; }
+    .results-table { overflow-x: auto; }
+    .results-table table { min-width: 600px; }
+    .exam-nav { flex-direction: column; }
+    .exam-nav .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ========== LANDING (QR) ========== -->
+  <section class="screen active" id="screen-landing">
+    <div class="landing">
+      <div class="landing-left">
+        <div>
+          <div class="brand-tag">Škoda · Human Touch</div>
+          <h1>人性化服務<br><span class="accent">認證測驗</span></h1>
+          <p class="landing-sub">
+            根植於 Human、Simplifying、Surprising 三大核心價值，
+            本測驗將檢視您對 Škoda Human Touch 策略、行為模型，
+            以及實務執行的理解程度。
+          </p>
+        </div>
+
+        <div class="landing-meta">
+          <div class="meta-item">
+            <div class="k">題數</div>
+            <div class="v">20 題</div>
+          </div>
+          <div class="meta-item">
+            <div class="k">時間</div>
+            <div class="v">20 分鐘</div>
+          </div>
+          <div class="meta-item">
+            <div class="k">通過</div>
+            <div class="v">70 分</div>
+          </div>
+        </div>
+
+        <div class="landing-footer">S15 · VX4 · Behavioural Model</div>
+      </div>
+
+      <div class="landing-right">
+        <div class="qr-card">
+          <div class="qr-label">Scan to Begin</div>
+          <div id="qrcode"></div>
+          <div class="qr-instruction">
+            請使用手機掃描上方 QR code<br>
+            <strong>開始您的測驗之旅</strong>
+          </div>
+        </div>
+        <div class="qr-hint">或點擊下方按鈕，直接在此裝置開始測驗</div>
+        <button class="start-direct" onclick="goRegister()">直接開始測驗 →</button>
+      </div>
+    </div>
+    <button class="admin-pill" onclick="goAdmin()">管理後台</button>
+  </section>
+
+  <!-- ========== REGISTER ========== -->
+  <section class="screen" id="screen-register">
+    <div class="register-wrap">
+      <div class="register-card">
+        <div class="register-head">
+          <div class="brand-tag">Step 01 · 考生報到</div>
+          <h2>準備好了嗎？</h2>
+          <p>請輸入您的資訊，讓我們為您開啟這場 Human Touch 之旅</p>
+        </div>
+        <div class="register-body">
+          <div class="exam-info">
+            <strong>📋 測驗說明</strong><br>
+            共 <strong>20 題</strong>單選題，作答時間 <strong>20 分鐘</strong>。<br>
+            每題 5 分，答對 14 題 (70 分) 為及格。<br>
+            時間到系統將自動交卷，請把握時間作答。
+          </div>
+
+          <div class="field">
+            <label for="name-input">姓名 *</label>
+            <input type="text" id="name-input" placeholder="請輸入您的全名" maxlength="30" autocomplete="off">
+          </div>
+
+          <div class="field">
+            <label for="org-input">單位 / 經銷商 (選填)</label>
+            <input type="text" id="org-input" placeholder="例：台中經銷商" maxlength="40" autocomplete="off">
+          </div>
+
+          <button class="btn" onclick="startExam()">開始測驗 →</button>
+          <button class="btn btn-secondary" style="margin-top: 10px;" onclick="goLanding()">返回</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== EXAM ========== -->
+  <section class="screen" id="screen-exam">
+    <div class="exam-wrap">
+      <div class="exam-header">
+        <div class="exam-head-left">
+          <div class="name" id="exam-candidate-name">—</div>
+          <div class="meta">Human Touch 線上測驗</div>
+        </div>
+        <div class="timer" id="timer">
+          <span class="label">剩餘</span>
+          <span class="time" id="timer-display">20:00</span>
+        </div>
+      </div>
+
+      <div class="progress-bar-wrap">
+        <div class="progress-info">
+          <span>題目進度</span>
+          <span><strong id="q-current">1</strong> / <span id="q-total">20</span></span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width: 5%"></div>
+        </div>
+      </div>
+
+      <div class="q-card">
+        <div class="q-index" id="q-index">Question 01</div>
+        <div class="q-text" id="q-text">—</div>
+        <div class="options" id="q-options"></div>
+
+        <div class="exam-nav">
+          <button class="btn btn-secondary" id="btn-prev" onclick="prevQ()">← 上一題</button>
+          <button class="btn" id="btn-next" onclick="nextQ()">下一題 →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== RESULT ========== -->
+  <section class="screen" id="screen-result">
+    <div class="result-wrap">
+      <div class="result-card">
+        <div class="result-head">
+          <span class="result-status" id="result-status">—</span>
+          <div class="score-big" id="result-score">0</div>
+          <div class="score-label">TOTAL SCORE / 100</div>
+        </div>
+        <div class="result-body">
+          <div class="stat-row">
+            <div class="stat">
+              <div class="num" id="stat-correct">0</div>
+              <div class="lbl">答對題數</div>
+            </div>
+            <div class="stat">
+              <div class="num" id="stat-wrong">0</div>
+              <div class="lbl">答錯題數</div>
+            </div>
+            <div class="stat">
+              <div class="num" id="stat-rate">0%</div>
+              <div class="lbl">正確率</div>
+            </div>
+          </div>
+
+          <div class="result-info">
+            <div><span>姓名</span><strong id="res-name">—</strong></div>
+            <div><span>單位</span><strong id="res-org">—</strong></div>
+            <div><span>作答時間</span><strong id="res-time">—</strong></div>
+            <div><span>完成時刻</span><strong id="res-finish">—</strong></div>
+          </div>
+
+          <div class="result-actions">
+            <button class="btn" onclick="goLanding()">返回首頁</button>
+            <button class="btn btn-secondary" onclick="toggleReview()" id="btn-review">查看詳解</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="review-section" id="review-section" style="display:none;">
+        <h3>📖 作答詳解</h3>
+        <div id="review-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== ADMIN ========== -->
+  <section class="screen" id="screen-admin">
+    <div class="admin-wrap">
+      <div class="admin-head">
+        <h1><small>Škoda · Human Touch</small>成績管理後台</h1>
+        <div class="admin-actions">
+          <button class="btn" onclick="window.print()">🖨️ 列印成績</button>
+          <button class="btn btn-secondary" onclick="exportCSV()">📥 匯出 CSV</button>
+          <button class="btn btn-secondary" onclick="clearResults()">🗑️ 清空資料</button>
+          <button class="btn btn-secondary" onclick="goLanding()">← 返回</button>
+        </div>
+      </div>
+
+      <div class="admin-stats" id="admin-stats">
+        <div class="stat-card"><div class="num" id="ad-total">0</div><div class="lbl">總考生數</div></div>
+        <div class="stat-card"><div class="num" id="ad-pass">0</div><div class="lbl">通過人數</div></div>
+        <div class="stat-card"><div class="num" id="ad-avg">0</div><div class="lbl">平均分數</div></div>
+        <div class="stat-card"><div class="num" id="ad-rate">0%</div><div class="lbl">通過率</div></div>
+      </div>
+
+      <div class="results-table">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>姓名</th>
+              <th>單位</th>
+              <th>分數</th>
+              <th>正確/總題</th>
+              <th>用時</th>
+              <th>結果</th>
+              <th>完成時間</th>
+            </tr>
+          </thead>
+          <tbody id="admin-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// ============================================================
+// QUESTION BANK (60 questions)
+// ============================================================
+const QUESTION_BANK = [
+  // ---- Human Touch 核心概念 (1-15) ----
+  {q:"Human Touch 價值觀中，以下哪三項是核心價值？",o:["Human、Simplifying、Surprising","Quality、Service、Innovation","Speed、Efficiency、Design","Trust、Quality、Price"],a:0},
+  {q:"「Human」這項核心價值的意義是什麼？",o:["讓顧客感受像老朋友","化繁為簡讓顧客有完美體驗","讓顧客超過預期的驚喜","追求最佳性價比"],a:0},
+  {q:"「Simplifying」這項核心價值的意義是什麼？",o:["讓顧客感受像老朋友","化繁為簡，讓顧客有完美的體驗","讓顧客超過預期的驚喜","提供最豪華的服務"],a:1},
+  {q:"「Surprising」這項核心價值的意義是什麼？",o:["讓顧客感受像老朋友","化繁為簡讓顧客有完美體驗","讓顧客超過預期的驚喜","提供最便宜的價格"],a:2},
+  {q:"The Human Touch 對 Škoda 品牌而言代表什麼？",o:["僅是顧客服務部門的工作","是我們品牌的獨特核心，體現對超越顧客期望的承諾","只是行銷口號","經銷商的KPI"],a:1},
+  {q:"Human Touch 不是以下哪一項？",o:["一個顧客體驗專案","我們的差異化優勢","僅僅關乎指標數據","TO BE 體驗的定義"],a:2},
+  {q:"在 Human Touch 思維中，以下哪個順序是「目標」狀態？",o:["產品 → 需求 → 客戶","客戶 → 需求 → 產品","需求 → 產品 → 客戶","產品 → 客戶 → 需求"],a:1},
+  {q:"根據資料，在整個汽車產業的顧客體驗排名中，汽車經銷商排名為何？",o:["第5名","第7名","第11名","第1名"],a:2},
+  {q:"根據 Harvard Business Review，擁有優質體驗的顧客其消費金額高出多少？",o:["50%","100%","140%","200%"],a:2},
+  {q:"根據 Gartner，卓越的顧客體驗能驅動多少比例的顧客忠誠度？",o:["33%","50%","66%","85%"],a:2},
+  {q:"以客戶為中心的公司在哪五項關鍵能力上表現優異？",o:["願景、設計、文化、顧客之聲、成效衡量","品質、價格、服務、速度、創新","產品、通路、促銷、人員、流程","銷售、行銷、研發、生產、財務"],a:0},
+  {q:"Human Touch 行為模型的主要目的是什麼？",o:["作為銷售話術腳本讓員工照念","提供具體行為指引，確保每次互動保有真誠溫度","僅是評估員工績效的工具","取代品牌手冊"],a:1},
+  {q:"關於行為模型，以下何者正確？",o:["它是領導者的制式腳本","它是各市場共用的基礎框架，可在地化調整","它是一法適用所有市場的固定規範","它僅適用於銷售人員"],a:1},
+  {q:"Human Touch 的目標是什麼？",o:["將人置於中心，涵蓋每一次互動 (實體或數位)","僅聚焦於車輛品質提升","只改善線上數位體驗","降低營運成本"],a:0},
+  {q:"有了 Human Touch 之後，Škoda 的視角將轉向什麼？",o:["產品","成本","顧客","競爭對手"],a:2},
+
+  // ---- Human 行為 (16-25) ----
+  {q:"「以 Human 的方式行事」包含哪三大行為？",o:["要專業、引導至解決方案、承擔責任","保持好奇心、展現勇氣、激勵生命","要有同理心、展現出關心、讓事情變得個人化","快速回應、效率至上、達成目標"],a:2},
+  {q:"以下哪個是「有 Human 行為」的正面指標？",o:["使用過於艱深的專業術語","稱呼顧客名字並回顧過去的互動內容","等待顧客主動開口詢問","採取千篇一律、缺乏個人化的服務方式"],a:1},
+  {q:"以下哪個是「有 Human 行為」的負面指標（不要做）？",o:["顧客一進門立即主動眼神交流、面帶微笑","刻意迴避與顧客的接觸","使用積極正向的語言","以簡單而有意義的方式慶祝顧客的購車周年"],a:1},
+  {q:"「要有同理心」的具體行為不包括以下哪一項？",o:["與顧客眼神交流，面帶微笑，主動打招呼","設身處地，從顧客角度思考","認識你的客戶","以艱深的技術術語展現專業"],a:3},
+  {q:"「表現出關心」的具體行為包含以下哪一項？",o:["以溫暖人性化的方式溝通","只談業績與產品規格","等待顧客開口才回應","僅關注主要決策者，忽略陪同者"],a:0},
+  {q:"「讓事情變得個人化」的具體行為是？",o:["每個顧客都使用相同的銷售話術","銘記並善用顧客的個人資訊","快速結束對話節省時間","只在顧客要求時才提供服務"],a:1},
+  {q:"在服務全家人時，Škoda 建議可採取什麼行動？",o:["專注服務決策者即可","為孩子準備小禮物等貼心小舉動","建議家人到旁邊等候","以成人為主要互動對象"],a:1},
+  {q:"關於慶祝顧客購車周年，Škoda 的做法是？",o:["只對VIP客戶才需慶祝","以簡單而有意義的方式慶祝，讓顧客感受到自己是 Škoda 大家庭中獨特且珍貴的一員","發送制式簡訊即可","不需要特別慶祝"],a:1},
+  {q:"以下哪一種問候方式最符合 Human 價值？",o:["「歡迎來到 Škoda，請問有什麼可以幫您？」(生硬制式)","「決定好了叫我」(然後走開)","「早安，(顧客姓名)！歡迎光臨 Škoda，我是(名字)，今天很高興為您服務！」","「有問題再找我」(對話結束)"],a:2},
+  {q:"「有 Human 行為的四個階段」正確順序為？",o:["被動行為 → 要有同理心 → 表現出關心 → 讓事情變得個人化","讓事情個人化 → 表現出關心 → 要有同理心 → 被動行為","要有同理心 → 被動行為 → 表現出關心 → 讓事情個人化","表現出關心 → 要有同理心 → 讓事情個人化 → 被動行為"],a:0},
+
+  // ---- Simplifying 行為 (26-35) ----
+  {q:"「以 Simplifying 的方式行事」包含哪三大行為？",o:["要有同理心、展現關心、讓事情個人化","保持好奇心、展現勇氣、激勵生命","要專業、引導至解決方案、承擔責任","傾聽、建議、銷售"],a:2},
+  {q:"「要專業」的具體行為不包括以下哪一項？",o:["成為值得信賴的專業顧問，言出必行","以所在的工作環境為榮","坦誠面對任何失誤或延誤，絕不推卸責任","遇到失誤時推給其他部門"],a:3},
+  {q:"「引導至解決方案」的具體行為是？",o:["一次提供所有可能的選項讓顧客自行選擇","先傾聽，再提供建議；精簡選項","直接告訴顧客最貴的選擇","不做任何建議，讓顧客自行決定"],a:1},
+  {q:"「承擔責任」的具體行為是？",o:["嚴格按規定辦事，不做職責外的事","主動尋找為顧客節省時間的機會，必要時代顧客主動處理事務","將所有問題轉給其他同事","僅處理自己被指派的任務"],a:1},
+  {q:"以下哪一項是「Simplifying 行為」的負面指標？",o:["將複雜流程拆解成易於理解的小步驟","讓顧客隨時掌握進度","資訊過多令人無所適從、讓顧客等待過久","事先做好充分準備"],a:2},
+  {q:"「大事化小」原則的精神是什麼？",o:["將複雜流程拆解成易於理解的小步驟，讓顧客毫無壓力","盡量簡短對話","省略所有技術說明","只介紹基本功能"],a:0},
+  {q:"當對話結束時，符合 Simplifying 的做法是？",o:["快速結束以節省時間","回顧討論重點、回應顧客疑慮，並以正向結果作為收尾","讓顧客自行整理所獲得的資訊","僅留下名片"],a:1},
+  {q:"以下哪一項最能展現「對顧客時間的尊重」？",o:["事先做好充分準備，確保一切就緒","讓顧客等待過久","重複詢問相同的問題","臨時查找資料"],a:0},
+  {q:"在顧客服務中，Škoda 建議對複雜流程的最佳做法是？",o:["假設顧客已熟悉流程","省略說明以節省時間","主動代顧客處理相關事務，為他們節省時間與心力","要求顧客自行處理所有文件"],a:2},
+  {q:"顧客期望「Simplifying」體驗的核心是什麼？",o:["互動順暢、有效率、不浪費時間","價格最便宜","贈品最多","服務員最多"],a:0},
+
+  // ---- Surprising 行為 (36-45) ----
+  {q:"「以 Surprising 的方式行事」包含哪三大行為？",o:["要有同理心、展現關心、讓事情個人化","要專業、引導至解決方案、承擔責任","保持好奇心、展現勇氣、激勵生命","歡迎、介紹、成交"],a:2},
+  {q:"「保持好奇心」的具體行為包含？",o:["真正對顧客感興趣，深入提問，不止於表面","快速完成交易","僅回答顧客的問題","避免提問避免冒犯"],a:0},
+  {q:"「展現勇氣」的具體行為是？",o:["即使困難，仍要坦誠以對；積極尋求更好的做法","永遠順從顧客意見避免衝突","對所有問題都說Yes","避免討論可能的風險"],a:0},
+  {q:"「激勵生命」的具體行為是？",o:["留下令人難忘的美好印象，善用「Extra mile」多走一哩路的精神","按SOP執行","提供最低標準的服務","避免額外付出"],a:0},
+  {q:"以下哪一項是「Surprising 行為」的負面指標？",o:["創造 A-ha 時刻","善用 Simply Clever 功能介紹","運用 FAB 方法","把每次互動都當例行公事處理"],a:3},
+  {q:"什麼是「A-ha 時刻」？",o:["顧客生氣時的瞬間","豁然開朗、瞬間理解並對解決方案感到興奮清晰的感覺","顧客離開時的瞬間","交車時的瞬間"],a:1},
+  {q:"FAB 方法代表什麼？",o:["Feature–Advantage–Benefit","Fast-Agile-Brave","Friendly-Active-Bold","Family-Auto-Brand"],a:0},
+  {q:"關於驚喜的設計，Škoda 的觀念是？",o:["驚喜必須盛大或昂貴","小細節與貼心舉動往往能真正打動人心","只有VIP才值得驚喜","每次互動都應有相同的驚喜"],a:1},
+  {q:"在介紹車輛時，Škoda 建議運用什麼方式？",o:["只強調規格與參數","善用貼近台灣日常生活的實例與具體好處","照本宣科介紹","由顧客自行研究"],a:1},
+  {q:"提及競品時，Škoda 的態度應該是？",o:["極力貶低競品","保持自信與從容，適時可提及競品，但始終強調 Škoda 的獨特優勢與 Extra mile 特色","完全避免討論競品","建議顧客去看競品再決定"],a:1},
+
+  // ---- 銷售接觸點 (46-53) ----
+  {q:"在銷售「熱烈歡迎」階段，正確做法是？",o:["等顧客主動開口才打招呼","以溫暖友善的微笑和開放肢體語言迎接顧客，並主動自我介紹","讓顧客自行參觀","立即介紹最貴的車款"],a:1},
+  {q:"在「需求分析」階段，Surprising 的做法是？",o:["直接推薦最貴車款","將對話從純技術說明，轉向情感的真實連結","省略需求分析直接成交","只問基本問題"],a:1},
+  {q:"在「試駕」階段的最佳做法是？",o:["固定路線不可變更","依顧客需求量身打造試駕體驗，例如帶他們走熟悉的路線","盡量縮短試駕時間","由業務全程駕駛"],a:1},
+  {q:"在「談判合約」階段關於給顧客時間的做法？",o:["施加壓力盡快成交","給顧客充裕的思考空間，讓他們感受到被尊重","不斷催促決定","要求立即簽約"],a:1},
+  {q:"在「等待時間」階段的正確做法是？",o:["讓顧客乾等毫無消息","主動與顧客保持聯繫，真誠感謝耐心等待","要求顧客自行處理等待","縮短流程省略等待通知"],a:1},
+  {q:"在「產品交接」階段的特別驚喜做法是？",o:["快速交車以節省時間","拍一張第一次駕駛的紀念照，讓這段經歷更有溫度","直接把鑰匙交給顧客","省略所有儀式"],a:1},
+  {q:"在「後續追蹤」階段的核心態度應是？",o:["是關心，不是催促銷售，沒有壓力的後續追蹤","頻繁推銷新產品","只有需要簽約時才聯繫","完全不聯繫以免打擾"],a:0},
+  {q:"關於交接新車時的資訊量，最佳做法是？",o:["一次塞給顧客所有資訊以顯示專業","循序漸進地引導，先專注顧客最常使用的功能","讓顧客自行閱讀說明書","只介紹最基本的啟動方式"],a:1},
+
+  // ---- 售後接觸點 (54-60) ----
+  {q:"在售後「初始階段」以最佳建議引導顧客的做法是？",o:["提供所有可能時段讓顧客自行選","提出一個推薦選項，既讓預約順暢又讓顧客保有最終決定權","只有週末才能預約","由系統隨機分配時段"],a:1},
+  {q:"在售後「進廠」階段關於顧客物品的貼心做法是？",o:["不提醒，由顧客自行負責","提醒顧客取走車內隨身物品，例如充電器、太陽眼鏡","把物品留在車上","要求顧客先清空車輛才能進廠"],a:1},
+  {q:"在售後「執行」階段的溝通原則是？",o:["發現問題立即告知最壞情況","以讓人安心的語氣溝通，用不造成恐慌的方式提出建議","等全部完工才一次告知","只用專業術語說明"],a:1},
+  {q:"售後服務時，對於煞車片磨損的說明方式，哪個較符合 Human Touch？",o:["「您的煞車片磨損了，必須立即更換」","「您的煞車目前運作正常，不過大約5,000公里後就可以考慮更換了」","「您的車快不能開了」","不主動告知，等顧客自己發現"],a:1},
+  {q:"在售後「離廠」階段讓顧客驚喜的做法是？",o:["盡快讓顧客離開","讓車輛以「煥然一新」的狀態交還給顧客，如簡單吸塵、擦拭儀表板","直接把鑰匙丟給顧客","不做任何清潔"],a:1},
+  {q:"離廠前，以下哪項行為展現了 Human Touch 精神？",o:["完工就可以","直接結帳離開","主動確認顧客是否完全滿意，給顧客表達的機會","讓顧客自己檢查車輛"],a:2},
+  {q:"「多走一哩路 (Extra mile)」的精神在售後階段的體現是？",o:["延長服務時間多收費","例如在下雨天主動幫顧客撐傘送到車旁","只做份內事","收取額外服務費"],a:1},
+];
+
+// ============================================================
+// APP STATE
+// ============================================================
+let currentScreen = 'landing';
+let examState = {
+  name: '',
+  org: '',
+  questions: [],        // selected 20 questions (shuffled)
+  answers: [],          // user answers, -1 if not answered
+  currentIdx: 0,
+  startTime: null,
+  endTime: null,
+  remainingSec: 20 * 60,
+  timerInterval: null,
+  finished: false,
+};
+
+// ============================================================
+// SCREEN NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  currentScreen = id;
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function goLanding() {
+  stopTimer();
+  showScreen('landing');
+}
+
+function goRegister() {
+  showScreen('register');
+  setTimeout(() => document.getElementById('name-input').focus(), 100);
+}
+
+function goAdmin() {
+  renderAdmin();
+  showScreen('admin');
+}
+
+// ============================================================
+// QR CODE
+// ============================================================
+function initQRCode() {
+  const url = window.location.href.split('#')[0];
+  const qrEl = document.getElementById('qrcode');
+  qrEl.innerHTML = '';
+  try {
+    new QRCode(qrEl, {
+      text: url,
+      width: 180,
+      height: 180,
+      colorDark: "#0E3A2F",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M
+    });
+  } catch (e) {
+    qrEl.innerHTML = '<div style="padding:20px;color:#999;font-size:12px;">QR Code 產生中，請點擊下方按鈕開始</div>';
+  }
+}
+
+// ============================================================
+// START EXAM
+// ============================================================
+function startExam() {
+  const name = document.getElementById('name-input').value.trim();
+  const org = document.getElementById('org-input').value.trim();
+  if (!name) {
+    alert('請輸入姓名');
+    document.getElementById('name-input').focus();
+    return;
+  }
+
+  // pick 20 questions, shuffled
+  const shuffled = [...QUESTION_BANK].sort(() => Math.random() - 0.5);
+  const picked = shuffled.slice(0, 20);
+
+  // for each question, shuffle options while tracking correct answer
+  const finalQs = picked.map(q => {
+    const opts = q.o.map((text, i) => ({text, isCorrect: i === q.a}));
+    opts.sort(() => Math.random() - 0.5);
+    return {
+      q: q.q,
+      o: opts.map(x => x.text),
+      a: opts.findIndex(x => x.isCorrect)
+    };
+  });
+
+  examState = {
+    name, org,
+    questions: finalQs,
+    answers: new Array(20).fill(-1),
+    currentIdx: 0,
+    startTime: new Date(),
+    endTime: null,
+    remainingSec: 20 * 60,
+    timerInterval: null,
+    finished: false,
+  };
+
+  document.getElementById('exam-candidate-name').textContent = name + (org ? ' · ' + org : '');
+  document.getElementById('q-total').textContent = 20;
+
+  showScreen('exam');
+  renderQuestion();
+  startTimer();
+}
+
+// ============================================================
+// TIMER
+// ============================================================
+function startTimer() {
+  stopTimer();
+  updateTimerDisplay();
+  examState.timerInterval = setInterval(() => {
+    examState.remainingSec--;
+    updateTimerDisplay();
+    if (examState.remainingSec <= 0) {
+      stopTimer();
+      alert('時間到！系統將自動交卷。');
+      finishExam();
+    }
+  }, 1000);
+}
+
+function stopTimer() {
+  if (examState.timerInterval) {
+    clearInterval(examState.timerInterval);
+    examState.timerInterval = null;
+  }
+}
+
+function updTwo(n) { return String(Math.max(0, n)).padStart(2, '0'); }
+function updateTimerDisplay() {
+  const m = Math.floor(examState.remainingSec / 60);
+  const s = examState.remainingSec % 60;
+  const disp = document.getElementById('timer-display');
+  const tm = document.getElementById('timer');
+  disp.textContent = updTwo(m) + ':' + updTwo(s);
+  if (examState.remainingSec <= 60) tm.classList.add('warning');
+  else tm.classList.remove('warning');
+}
+
+// ============================================================
+// QUESTION RENDERING
+// ============================================================
+function renderQuestion() {
+  const i = examState.currentIdx;
+  const q = examState.questions[i];
+  document.getElementById('q-index').textContent = 'Question ' + String(i + 1).padStart(2, '0');
+  document.getElementById('q-text').textContent = q.q;
+  document.getElementById('q-current').textContent = i + 1;
+
+  const progress = ((i + 1) / examState.questions.length) * 100;
+  document.getElementById('progress-fill').style.width = progress + '%';
+
+  const optsEl = document.getElementById('q-options');
+  optsEl.innerHTML = '';
+  q.o.forEach((txt, idx) => {
+    const el = document.createElement('div');
+    el.className = 'option' + (examState.answers[i] === idx ? ' selected' : '');
+    el.innerHTML = `
+      <div class="opt-letter">${String.fromCharCode(65 + idx)}</div>
+      <div class="opt-text">${txt}</div>
+    `;
+    el.onclick = () => selectOption(idx);
+    optsEl.appendChild(el);
+  });
+
+  // Buttons
+  document.getElementById('btn-prev').disabled = (i === 0);
+  const nextBtn = document.getElementById('btn-next');
+  if (i === examState.questions.length - 1) {
+    nextBtn.textContent = '交卷 ✓';
+  } else {
+    nextBtn.textContent = '下一題 →';
+  }
+}
+
+function selectOption(idx) {
+  examState.answers[examState.currentIdx] = idx;
+  renderQuestion();
+}
+
+function prevQ() {
+  if (examState.currentIdx > 0) {
+    examState.currentIdx--;
+    renderQuestion();
+  }
+}
+
+function nextQ() {
+  if (examState.currentIdx < examState.questions.length - 1) {
+    examState.currentIdx++;
+    renderQuestion();
+  } else {
+    // submit
+    const unanswered = examState.answers.filter(a => a === -1).length;
+    if (unanswered > 0) {
+      if (!confirm(`您還有 ${unanswered} 題未作答，確定要交卷嗎？`)) return;
+    } else {
+      if (!confirm('確定要交卷嗎？交卷後無法修改答案。')) return;
+    }
+    finishExam();
+  }
+}
+
+// ============================================================
+// FINISH EXAM
+// ============================================================
+function finishExam() {
+  stopTimer();
+  examState.endTime = new Date();
+  examState.finished = true;
+
+  // grade
+  let correct = 0;
+  examState.questions.forEach((q, i) => {
+    if (examState.answers[i] === q.a) correct++;
+  });
+  const score = Math.round((correct / examState.questions.length) * 100);
+  const passed = score >= 70;
+
+  // build record
+  const durationMs = examState.endTime - examState.startTime;
+  const durMin = Math.floor(durationMs / 60000);
+  const durSec = Math.floor((durationMs % 60000) / 1000);
+  const durationStr = durMin + '分' + updTwo(durSec) + '秒';
+
+  const record = {
+    id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    name: examState.name,
+    org: examState.org,
+    score,
+    correct,
+    total: examState.questions.length,
+    passed,
+    duration: durationStr,
+    durationSec: Math.floor(durationMs / 1000),
+    finishedAt: examState.endTime.toISOString(),
+    questions: examState.questions,
+    answers: examState.answers,
+  };
+
+  saveRecord(record);
+  showResult(record);
+}
+
+// ============================================================
+// RESULT SCREEN
+// ============================================================
+function showResult(rec) {
+  document.getElementById('result-score').textContent = rec.score;
+  document.getElementById('result-status').textContent = rec.passed ? '✓ 恭喜通過' : '✗ 未通過';
+  document.getElementById('result-status').className = 'result-status ' + (rec.passed ? 'pass' : 'fail');
+  document.getElementById('stat-correct').textContent = rec.correct;
+  document.getElementById('stat-wrong').textContent = rec.total - rec.correct;
+  document.getElementById('stat-rate').textContent = Math.round(rec.correct / rec.total * 100) + '%';
+  document.getElementById('res-name').textContent = rec.name;
+  document.getElementById('res-org').textContent = rec.org || '—';
+  document.getElementById('res-time').textContent = rec.duration;
+  document.getElementById('res-finish').textContent = formatDateTime(rec.finishedAt);
+
+  // Review (hidden by default)
+  const reviewList = document.getElementById('review-list');
+  reviewList.innerHTML = '';
+  rec.questions.forEach((q, i) => {
+    const userAns = rec.answers[i];
+    const isCorrect = userAns === q.a;
+    const div = document.createElement('div');
+    div.className = 'review-item ' + (isCorrect ? 'correct' : 'wrong');
+    const userAnsText = userAns === -1 ? '（未作答）' : (String.fromCharCode(65 + userAns) + '. ' + q.o[userAns]);
+    const correctAnsText = String.fromCharCode(65 + q.a) + '. ' + q.o[q.a];
+    div.innerHTML = `
+      <div class="review-q ${isCorrect ? 'correct' : 'wrong'}">
+        <span class="qnum">${i + 1}</span>${q.q}
+      </div>
+      <div class="review-ans">
+        您的答案：<span class="${isCorrect ? 'correct-ans' : 'your'}">${userAnsText}</span>
+        ${!isCorrect ? '<br>正確答案：<span class="correct-ans">' + correctAnsText + '</span>' : ''}
+      </div>
+    `;
+    reviewList.appendChild(div);
+  });
+  document.getElementById('review-section').style.display = 'none';
+  document.getElementById('btn-review').textContent = '查看詳解';
+
+  showScreen('result');
+}
+
+function toggleReview() {
+  const sec = document.getElementById('review-section');
+  const btn = document.getElementById('btn-review');
+  if (sec.style.display === 'none') {
+    sec.style.display = 'block';
+    btn.textContent = '隱藏詳解';
+    setTimeout(() => sec.scrollIntoView({behavior: 'smooth', block: 'start'}), 100);
+  } else {
+    sec.style.display = 'none';
+    btn.textContent = '查看詳解';
+  }
+}
+
+// ============================================================
+// STORAGE (in-memory)
+// ============================================================
+let allRecords = [];
+
+function saveRecord(rec) {
+  allRecords.push(rec);
+}
+
+function clearResults() {
+  if (!confirm('確定要清空所有成績資料嗎？此動作無法復原。')) return;
+  allRecords = [];
+  renderAdmin();
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+function renderAdmin() {
+  const total = allRecords.length;
+  const passCount = allRecords.filter(r => r.passed).length;
+  const avgScore = total > 0 ? Math.round(allRecords.reduce((s, r) => s + r.score, 0) / total) : 0;
+  const passRate = total > 0 ? Math.round(passCount / total * 100) : 0;
+
+  document.getElementById('ad-total').textContent = total;
+  document.getElementById('ad-pass').textContent = passCount;
+  document.getElementById('ad-avg').textContent = avgScore;
+  document.getElementById('ad-rate').textContent = passRate + '%';
+
+  const tbody = document.getElementById('admin-tbody');
+  if (total === 0) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="big">—</div>尚無考生完成測驗</div></td></tr>`;
+    return;
+  }
+
+  // sort by finishedAt desc
+  const sorted = [...allRecords].sort((a, b) => new Date(b.finishedAt) - new Date(a.finishedAt));
+  tbody.innerHTML = sorted.map((r, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><strong>${escapeHtml(r.name)}</strong></td>
+      <td>${escapeHtml(r.org) || '—'}</td>
+      <td><strong style="font-family:Georgia,serif;font-size:17px;color:var(--skoda-dark);">${r.score}</strong></td>
+      <td>${r.correct} / ${r.total}</td>
+      <td>${r.duration}</td>
+      <td><span class="pill ${r.passed ? 'pass' : 'fail'}">${r.passed ? '通過' : '未通過'}</span></td>
+      <td>${formatDateTime(r.finishedAt)}</td>
+    </tr>
+  `).join('');
+}
+
+function exportCSV() {
+  if (allRecords.length === 0) {
+    alert('尚無資料可匯出');
+    return;
+  }
+  const headers = ['序號','姓名','單位','分數','答對','總題數','用時','結果','完成時間'];
+  const rows = allRecords.map((r, i) => [
+    i + 1, r.name, r.org || '', r.score, r.correct, r.total,
+    r.duration, r.passed ? '通過' : '未通過', formatDateTime(r.finishedAt)
+  ]);
+  const csv = [headers, ...rows].map(row =>
+    row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+  const bom = '\uFEFF'; // UTF-8 BOM for Excel
+  const blob = new Blob([bom + csv], {type: 'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Human_Touch_成績_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function formatDateTime(iso) {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = updTwo(d.getMonth() + 1);
+  const dd = updTwo(d.getDate());
+  const hh = updTwo(d.getHours());
+  const mm = updTwo(d.getMinutes());
+  return `${y}/${m}/${dd} ${hh}:${mm}`;
+}
+
+function escapeHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+// ============================================================
+// INIT
+// ============================================================
+window.addEventListener('DOMContentLoaded', () => {
+  initQRCode();
+
+  // Enter key on register
+  document.getElementById('name-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('org-input').focus();
+  });
+  document.getElementById('org-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startExam();
+  });
+
+  // Prevent accidental leave during exam
+  window.addEventListener('beforeunload', e => {
+    if (currentScreen === 'exam' && !examState.finished) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
+});
+</script>
+</body>
+</html>
