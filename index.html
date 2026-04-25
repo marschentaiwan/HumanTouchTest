@@ -105,12 +105,19 @@
     background: var(--skoda-mint);
   }
 
+  .landing-logo {
+    width: 180px;
+    height: auto;
+    margin-bottom: 32px;
+    display: block;
+  }
+
   .landing h1 {
     font-family: Georgia, "Times New Roman", serif;
     font-size: clamp(48px, 6vw, 84px);
     font-weight: 400;
     line-height: 1.05;
-    margin: 28px 0 24px;
+    margin: 0 0 24px;
     letter-spacing: -0.02em;
   }
   .landing h1 .accent { color: var(--skoda-mint); font-style: italic; }
@@ -936,7 +943,7 @@
     <div class="landing">
       <div class="landing-left">
         <div>
-          <div class="brand-tag">Škoda · Human Touch</div>
+          <img src="ht-logo.png" alt="Human Touch" class="landing-logo">
           <h1>人性化服務<br><span class="accent">認證測驗</span></h1>
           <p class="landing-sub">
             根植於 Human、Simplifying、Surprising 三大核心價值，
@@ -959,8 +966,6 @@
             <div class="v">70 分</div>
           </div>
         </div>
-
-        <div class="landing-footer">S15 · VX4 · Behavioural Model</div>
       </div>
 
       <div class="landing-right">
@@ -1157,12 +1162,13 @@
   <section class="screen" id="screen-admin">
     <div class="admin-wrap">
       <div class="admin-head">
-        <h1><small>Škoda · Human Touch · 超級管理員</small>考試成績管理後台</h1>
+        <h1><small>Škoda · Human Touch · 超級管理員</small>考試成績管理後台 <span id="cloud-status" style="font-size: 12px; font-weight: 400; margin-left: 12px;">☁️ 連線中...</span></h1>
         <div class="admin-actions">
+          <button class="btn btn-secondary" onclick="renderAdmin()">🔄 重新整理</button>
           <button class="btn btn-accent" onclick="exportExcel()">📊 下載 Excel</button>
           <button class="btn" onclick="exportCSV()">📥 下載 CSV</button>
           <button class="btn btn-secondary" onclick="window.print()">🖨️ 列印</button>
-          <button class="btn btn-secondary" onclick="clearResults()">🗑️ 清空</button>
+          <button class="btn btn-secondary" onclick="clearResults()">🗑️ 清空本機</button>
           <button class="btn btn-secondary" onclick="adminLogout()">🚪 登出</button>
         </div>
       </div>
@@ -1217,6 +1223,56 @@
 const ADMIN_PASSWORD = "skoda2026"; // 修改此處以變更管理員密碼
 const STORAGE_KEY = "skoda_ht_exam_records_v2";
 const DEFAULT_URL = "https://marschentaiwan.github.io/HumanTouchTest/";
+
+// ============================================================
+// FIREBASE CONFIG
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyAeKyYuS0YW1U6enpz-WB1GP7WkNx3V36I",
+  authDomain: "humantouchexam.firebaseapp.com",
+  projectId: "humantouchexam",
+  storageBucket: "humantouchexam.firebasestorage.app",
+  messagingSenderId: "678036469024",
+  appId: "1:678036469024:web:c662f4bd35a66f82dc9345"
+};
+
+// Firebase state
+let fbApp = null;
+let fbDb = null;
+let firebaseReady = false;
+
+async function initFirebase() {
+  try {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+    const { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } =
+      await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+
+    fbApp = initializeApp(firebaseConfig);
+    fbDb = getFirestore(fbApp);
+
+    // Expose the functions we need
+    window._fb = { collection, addDoc, getDocs, query, orderBy, serverTimestamp };
+    firebaseReady = true;
+    console.log("✅ Firebase 連線成功");
+    updateCloudStatus(true);
+  } catch (e) {
+    console.error("⚠️ Firebase 初始化失敗，將改用本機儲存：", e);
+    firebaseReady = false;
+    updateCloudStatus(false);
+  }
+}
+
+function updateCloudStatus(online) {
+  const el = document.getElementById('cloud-status');
+  if (!el) return;
+  if (online) {
+    el.innerHTML = '☁️ 雲端已連線';
+    el.style.color = 'var(--skoda-mint)';
+  } else {
+    el.innerHTML = '⚠️ 僅本機儲存';
+    el.style.color = 'var(--skoda-accent)';
+  }
+}
 
 // ============================================================
 // QUESTION BANK (60 questions)
@@ -1314,20 +1370,20 @@ function goRegister() {
   showScreen('register');
   setTimeout(() => document.getElementById('name-input').focus(), 100);
 }
-function goAdminLogin() {
-  if (isAdminLoggedIn) { renderAdmin(); showScreen('admin'); return; }
+async function goAdminLogin() {
+  if (isAdminLoggedIn) { await renderAdmin(); showScreen('admin'); return; }
   document.getElementById('admin-pwd').value = '';
   document.getElementById('login-err').textContent = '';
   showScreen('login');
   setTimeout(() => document.getElementById('admin-pwd').focus(), 100);
 }
 
-function checkAdmin() {
+async function checkAdmin() {
   const pwd = document.getElementById('admin-pwd').value;
   if (pwd === ADMIN_PASSWORD) {
     isAdminLoggedIn = true;
     document.getElementById('login-err').textContent = '';
-    renderAdmin();
+    await renderAdmin();
     showScreen('admin');
   } else {
     document.getElementById('login-err').textContent = '⚠️ 密碼錯誤，請重新輸入';
@@ -1504,7 +1560,7 @@ function nextQ() {
 // ============================================================
 // FINISH EXAM
 // ============================================================
-function finishExam() {
+async function finishExam() {
   stopTimer();
   examState.endTime = new Date();
   examState.finished = true;
@@ -1532,13 +1588,10 @@ function finishExam() {
     durationSec: Math.floor(durationMs / 1000),
     startedAt: examState.startTime.toISOString(),
     finishedAt: examState.endTime.toISOString(),
-    // Keep answers for future analysis (not displayed)
-    // questions: examState.questions,
-    // answers: examState.answers,
   };
 
-  saveRecord(record);
-  // For immediate review, pass questions/answers via in-memory
+  // Save to cloud + local (async, but show result immediately)
+  saveRecord(record); // fire and forget
   showResult(record, examState.questions, examState.answers);
 }
 
@@ -1597,42 +1650,94 @@ function toggleReview() {
 }
 
 // ============================================================
-// STORAGE — using localStorage so records persist across sessions
+// STORAGE — Firebase (cloud) + localStorage (fallback/cache)
 // ============================================================
-function getAllRecords() {
+function getLocalRecords() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch (e) {
-    console.error('讀取記錄失敗', e);
+    console.error('讀取本機記錄失敗', e);
     return [];
   }
 }
 
-function saveRecord(rec) {
-  const records = getAllRecords();
+function saveLocalRecord(rec) {
+  const records = getLocalRecords();
   records.push(rec);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
   } catch (e) {
-    console.error('儲存失敗', e);
-    alert('成績儲存失敗（瀏覽器儲存空間可能已滿）');
+    console.error('本機儲存失敗', e);
   }
 }
 
-function clearResults() {
-  if (!confirm('⚠️ 確定要清空所有考試紀錄嗎？\n此動作無法復原！')) return;
-  if (!confirm('再次確認：真的要刪除所有考生成績嗎？')) return;
+async function getAllRecords() {
+  // Try cloud first
+  if (firebaseReady && fbDb && window._fb) {
+    try {
+      const { collection, getDocs, query, orderBy } = window._fb;
+      const q = query(collection(fbDb, "exam_results"), orderBy("finishedAt", "desc"));
+      const snap = await getDocs(q);
+      const records = [];
+      snap.forEach(doc => {
+        const data = doc.data();
+        records.push({ id: doc.id, ...data });
+      });
+      return records;
+    } catch (e) {
+      console.error('從雲端讀取失敗，改用本機資料：', e);
+    }
+  }
+  return getLocalRecords();
+}
+
+async function saveRecord(rec) {
+  // Always save to local as backup
+  saveLocalRecord(rec);
+
+  // Try to save to cloud
+  if (firebaseReady && fbDb && window._fb) {
+    try {
+      const { collection, addDoc } = window._fb;
+      await addDoc(collection(fbDb, "exam_results"), {
+        name: rec.name,
+        location: rec.location,
+        score: rec.score,
+        correct: rec.correct,
+        total: rec.total,
+        passed: rec.passed,
+        duration: rec.duration,
+        durationSec: rec.durationSec,
+        startedAt: rec.startedAt,
+        finishedAt: rec.finishedAt,
+      });
+      console.log('✅ 成績已上傳雲端');
+      return true;
+    } catch (e) {
+      console.error('⚠️ 雲端上傳失敗 (成績已存本機)：', e);
+      return false;
+    }
+  }
+  return false;
+}
+
+async function clearResults() {
+  if (!confirm('⚠️ 確定要清空本機所有考試紀錄嗎？\n此動作無法復原！\n\n※ 雲端資料需前往 Firebase Console 手動刪除')) return;
+  if (!confirm('再次確認：真的要刪除本機考生成績嗎？')) return;
   localStorage.removeItem(STORAGE_KEY);
-  renderAdmin();
-  alert('已清空所有紀錄');
+  await renderAdmin();
+  alert('已清空本機紀錄（雲端紀錄不受影響）');
 }
 
 // ============================================================
 // ADMIN DASHBOARD
 // ============================================================
-function renderAdmin() {
-  const all = getAllRecords();
+async function renderAdmin() {
+  const tbody = document.getElementById('admin-tbody');
+  tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">⏳</div>載入中...</div></td></tr>`;
+
+  const all = await getAllRecords();
 
   // Populate location filter
   const locations = [...new Set(all.map(r => r.location))].sort();
@@ -1666,7 +1771,6 @@ function renderAdmin() {
   document.getElementById('ad-avg').textContent = avgScore;
   document.getElementById('ad-rate').textContent = passRate + '%';
 
-  const tbody = document.getElementById('admin-tbody');
   if (filtered.length === 0) {
     tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">—</div>${total === 0 ? '尚無考生完成測驗' : '沒有符合篩選條件的紀錄'}</div></td></tr>`;
     return;
@@ -1697,8 +1801,8 @@ function renderAdmin() {
 // ============================================================
 // EXPORT — CSV
 // ============================================================
-function exportCSV() {
-  const all = getAllRecords();
+async function exportCSV() {
+  const all = await getAllRecords();
   if (all.length === 0) { alert('尚無資料可匯出'); return; }
 
   const headers = ['序號','姓名','據點','分數','答對','總題數','用時','結果','考試日期','考試時間','開始時間','完成時間'];
@@ -1725,8 +1829,8 @@ function exportCSV() {
 // ============================================================
 // EXPORT — Excel (XML-based .xls format, opens natively in Excel)
 // ============================================================
-function exportExcel() {
-  const all = getAllRecords();
+async function exportExcel() {
+  const all = await getAllRecords();
   if (all.length === 0) { alert('尚無資料可匯出'); return; }
 
   // Build Excel XML SpreadsheetML 2003 format
@@ -1888,6 +1992,7 @@ function xmlEscape(s) {
 // ============================================================
 window.addEventListener('DOMContentLoaded', () => {
   initQRCode();
+  initFirebase(); // Init Firebase asynchronously
 
   document.getElementById('name-input').addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('location-select').focus();
