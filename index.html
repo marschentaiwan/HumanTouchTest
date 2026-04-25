@@ -1175,6 +1175,7 @@
 
           <div class="result-actions">
             <button class="btn" onclick="goLanding()">返回首頁</button>
+            <button class="btn btn-accent" id="btn-cert" onclick="downloadCertificate()" style="display:none;">🏆 下載證書</button>
             <button class="btn btn-secondary" onclick="toggleReview()" id="btn-review">查看詳解</button>
           </div>
         </div>
@@ -1647,7 +1648,12 @@ async function finishExam() {
 // ============================================================
 // RESULT SCREEN
 // ============================================================
+// Holds current result for certificate generation
+let currentResultRecord = null;
+
 function showResult(rec, qs, answers) {
+  currentResultRecord = rec;
+
   document.getElementById('result-score').textContent = rec.score;
   document.getElementById('result-status').textContent = rec.passed ? '✓ 恭喜通過' : '✗ 未通過';
   document.getElementById('result-status').className = 'result-status ' + (rec.passed ? 'pass' : 'fail');
@@ -1658,6 +1664,9 @@ function showResult(rec, qs, answers) {
   document.getElementById('res-loc').textContent = rec.location;
   document.getElementById('res-time').textContent = rec.duration;
   document.getElementById('res-finish').textContent = formatDateTime(rec.finishedAt);
+
+  // Show/hide certificate button based on pass status
+  document.getElementById('btn-cert').style.display = rec.passed ? '' : 'none';
 
   const reviewList = document.getElementById('review-list');
   reviewList.innerHTML = '';
@@ -1696,6 +1705,368 @@ function toggleReview() {
     sec.style.display = 'none';
     btn.textContent = '查看詳解';
   }
+}
+
+// ============================================================
+// CERTIFICATE — Generate beautiful PDF certificate
+// ============================================================
+async function downloadCertificate() {
+  if (!currentResultRecord) { alert('找不到成績資料'); return; }
+  if (!currentResultRecord.passed) { alert('僅通過考試者可下載證書'); return; }
+
+  const btn = document.getElementById('btn-cert');
+  const orig = btn.textContent;
+  btn.textContent = '⏳ 產生中...';
+  btn.disabled = true;
+
+  try {
+    // Lazy-load jsPDF + html2canvas from CDN
+    if (!window.jspdf) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    }
+    if (!window.html2canvas) {
+      await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+    }
+
+    await renderAndDownloadCertificate(currentResultRecord);
+  } catch (e) {
+    console.error(e);
+    alert('證書產生失敗：' + e.message);
+  } finally {
+    btn.textContent = orig;
+    btn.disabled = false;
+  }
+}
+
+function loadScript(url) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = url;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load: ' + url));
+    document.head.appendChild(s);
+  });
+}
+
+async function renderAndDownloadCertificate(rec) {
+  // Build certificate HTML in a hidden container
+  const container = document.createElement('div');
+  container.style.position = 'fixed';
+  container.style.left = '-99999px';
+  container.style.top = '0';
+  container.style.width = '1400px';
+  container.style.height = '990px';
+  container.innerHTML = buildCertificateHTML(rec);
+  document.body.appendChild(container);
+
+  try {
+    // Wait for all images inside the certificate to fully load
+    const images = container.querySelectorAll('img');
+    await Promise.all(Array.from(images).map(img => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = () => resolve();
+        img.onerror = () => {
+          console.warn('證書圖片載入失敗：', img.src);
+          resolve(); // continue even if fails
+        };
+        // Failsafe timeout
+        setTimeout(resolve, 3000);
+      });
+    }));
+    // Small extra delay for browser to paint
+    await new Promise(r => setTimeout(r, 200));
+
+    const canvas = await window.html2canvas(container.firstElementChild, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+    });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const { jsPDF } = window.jspdf;
+    // A4 landscape: 297mm x 210mm
+    const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    pdf.addImage(imgData, 'JPEG', 0, 0, 297, 210);
+
+    const safeName = (rec.name || 'Certificate').replace(/[\\\/:*?"<>|\s]/g, '_');
+    const dateStr = dateSlug();
+    pdf.save(`HumanTouch_認證證書_${safeName}_${dateStr}.pdf`);
+  } finally {
+    document.body.removeChild(container);
+  }
+}
+
+function buildCertificateHTML(rec) {
+  const certNo = generateCertNo(rec);
+  const d = new Date(rec.finishedAt);
+  const dateStrZh = `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+
+  return `
+<div style="
+  width: 1400px;
+  height: 990px;
+  background: #FAFBF7;
+  position: relative;
+  font-family: 'PingFang TC', 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+  overflow: hidden;
+  box-sizing: border-box;
+">
+  <!-- Outer decorative frame -->
+  <div style="
+    position: absolute;
+    inset: 30px;
+    border: 3px solid #0E3A2F;
+    border-radius: 6px;
+  "></div>
+  <div style="
+    position: absolute;
+    inset: 42px;
+    border: 1px solid #0E3A2F;
+    border-radius: 4px;
+  "></div>
+
+  <!-- Top-left decorative corner -->
+  <div style="position: absolute; top: 60px; left: 60px; width: 80px; height: 80px;">
+    <div style="position: absolute; top: 0; left: 0; width: 80px; height: 4px; background: #78FAAE;"></div>
+    <div style="position: absolute; top: 0; left: 0; width: 4px; height: 80px; background: #78FAAE;"></div>
+    <div style="position: absolute; top: 12px; left: 12px; width: 50px; height: 2px; background: #0E3A2F;"></div>
+    <div style="position: absolute; top: 12px; left: 12px; width: 2px; height: 50px; background: #0E3A2F;"></div>
+  </div>
+
+  <!-- Top-right decorative corner -->
+  <div style="position: absolute; top: 60px; right: 60px; width: 80px; height: 80px;">
+    <div style="position: absolute; top: 0; right: 0; width: 80px; height: 4px; background: #78FAAE;"></div>
+    <div style="position: absolute; top: 0; right: 0; width: 4px; height: 80px; background: #78FAAE;"></div>
+    <div style="position: absolute; top: 12px; right: 12px; width: 50px; height: 2px; background: #0E3A2F;"></div>
+    <div style="position: absolute; top: 12px; right: 12px; width: 2px; height: 50px; background: #0E3A2F;"></div>
+  </div>
+
+  <!-- Bottom-left decorative corner -->
+  <div style="position: absolute; bottom: 60px; left: 60px; width: 80px; height: 80px;">
+    <div style="position: absolute; bottom: 0; left: 0; width: 80px; height: 4px; background: #78FAAE;"></div>
+    <div style="position: absolute; bottom: 0; left: 0; width: 4px; height: 80px; background: #78FAAE;"></div>
+    <div style="position: absolute; bottom: 12px; left: 12px; width: 50px; height: 2px; background: #0E3A2F;"></div>
+    <div style="position: absolute; bottom: 12px; left: 12px; width: 2px; height: 50px; background: #0E3A2F;"></div>
+  </div>
+
+  <!-- Bottom-right decorative corner -->
+  <div style="position: absolute; bottom: 60px; right: 60px; width: 80px; height: 80px;">
+    <div style="position: absolute; bottom: 0; right: 0; width: 80px; height: 4px; background: #78FAAE;"></div>
+    <div style="position: absolute; bottom: 0; right: 0; width: 4px; height: 80px; background: #78FAAE;"></div>
+    <div style="position: absolute; bottom: 12px; right: 12px; width: 50px; height: 2px; background: #0E3A2F;"></div>
+    <div style="position: absolute; bottom: 12px; right: 12px; width: 2px; height: 50px; background: #0E3A2F;"></div>
+  </div>
+
+  <!-- Main content -->
+  <div style="
+    position: absolute;
+    top: 110px; left: 110px; right: 110px; bottom: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  ">
+    <!-- Brand mark -->
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      height: 50px;
+    ">
+      <img src="logo-skoda-ht.png" alt="Škoda Human Touch" style="height: 50px; width: auto; display: block;" crossorigin="anonymous">
+    </div>
+
+    <!-- Title -->
+    <div style="
+      font-family: Georgia, 'Times New Roman', serif;
+      font-size: 78px;
+      color: #0E3A2F;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+      line-height: 1;
+      font-weight: 400;
+    ">Certificate</div>
+    <div style="
+      font-family: Georgia, serif;
+      font-size: 32px;
+      color: #5a6b66;
+      font-style: italic;
+      margin-bottom: 28px;
+      letter-spacing: 0.02em;
+    ">of Achievement</div>
+
+    <!-- Decorative line -->
+    <div style="
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    ">
+      <div style="width: 80px; height: 1px; background: #0E3A2F;"></div>
+      <div style="
+        width: 12px; height: 12px;
+        background: #78FAAE;
+        transform: rotate(45deg);
+        border: 1px solid #0E3A2F;
+      "></div>
+      <div style="width: 80px; height: 1px; background: #0E3A2F;"></div>
+    </div>
+
+    <!-- Hereby presented -->
+    <div style="
+      font-size: 18px;
+      color: #5a6b66;
+      letter-spacing: 0.15em;
+      margin-bottom: 18px;
+    ">茲 證 明</div>
+
+    <!-- Recipient name -->
+    <div style="
+      font-family: 'STKaiti', 'BiauKai', '標楷體', 'KaiTi', Georgia, serif;
+      font-size: 72px;
+      color: #0E3A2F;
+      font-weight: 600;
+      margin-bottom: 10px;
+      letter-spacing: 0.1em;
+      border-bottom: 2px solid #0E3A2F;
+      padding: 0 60px 14px;
+      min-width: 400px;
+    ">${escapeHtml(rec.name)}</div>
+    <div style="
+      font-size: 16px;
+      color: #5a6b66;
+      margin-bottom: 30px;
+      letter-spacing: 0.1em;
+    ">${escapeHtml(rec.location)}</div>
+
+    <!-- Body text -->
+    <div style="
+      font-size: 19px;
+      color: #0a1e19;
+      line-height: 1.9;
+      max-width: 900px;
+      margin-bottom: 32px;
+    ">
+      已完成 <strong style="color:#0E3A2F;">Škoda Human Touch 行為模型線上認證測驗</strong><br>
+      展現對「Human、Simplifying、Surprising」三大核心價值之深刻理解，<br>
+      足堪作為實踐人性化服務、傳遞品牌承諾的優秀典範。
+    </div>
+
+    <!-- Score badge -->
+    <div style="
+      display: inline-flex;
+      align-items: center;
+      gap: 24px;
+      padding: 16px 40px;
+      background: #0E3A2F;
+      border-radius: 100px;
+      margin-bottom: 36px;
+      box-shadow: 0 8px 24px -10px rgba(14, 58, 47, 0.4);
+    ">
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="font-size: 11px; color: #78FAAE; letter-spacing: 0.3em;">SCORE</div>
+        <div style="font-family: Georgia, serif; font-size: 32px; color: #78FAAE; line-height: 1; font-weight: 600;">${rec.score}<span style="font-size: 16px; opacity: 0.7;"> / 100</span></div>
+      </div>
+      <div style="width: 1px; height: 36px; background: rgba(120, 250, 174, 0.3);"></div>
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="font-size: 11px; color: #78FAAE; letter-spacing: 0.3em;">CORRECT</div>
+        <div style="font-family: Georgia, serif; font-size: 32px; color: #78FAAE; line-height: 1; font-weight: 600;">${rec.correct} / ${rec.total}</div>
+      </div>
+      <div style="width: 1px; height: 36px; background: rgba(120, 250, 174, 0.3);"></div>
+      <div style="display: flex; flex-direction: column; align-items: center;">
+        <div style="font-size: 11px; color: #78FAAE; letter-spacing: 0.3em;">TIME</div>
+        <div style="font-family: Georgia, serif; font-size: 32px; color: #78FAAE; line-height: 1; font-weight: 600;">${escapeHtml(rec.duration)}</div>
+      </div>
+    </div>
+
+    <!-- Footer area: date + seal + signature -->
+    <div style="
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding: 0 60px;
+    ">
+      <!-- Date (left) -->
+      <div style="text-align: center; flex: 1;">
+        <div style="
+          font-family: Georgia, serif;
+          font-size: 22px;
+          color: #0E3A2F;
+          padding-bottom: 8px;
+          border-bottom: 1.5px solid #0E3A2F;
+          display: inline-block;
+          padding: 4px 30px 6px;
+        ">${dateStrZh}</div>
+        <div style="font-size: 11px; color: #5a6b66; letter-spacing: 0.3em; margin-top: 8px;">DATE OF ISSUE</div>
+      </div>
+
+      <!-- Seal (center) -->
+      <div style="
+        width: 130px; height: 130px;
+        position: relative;
+        flex-shrink: 0;
+        margin: 0 30px;
+      ">
+        <svg viewBox="0 0 130 130" xmlns="http://www.w3.org/2000/svg" style="width: 100%; height: 100%;">
+          <circle cx="65" cy="65" r="62" fill="none" stroke="#E85D5D" stroke-width="2"/>
+          <circle cx="65" cy="65" r="55" fill="none" stroke="#E85D5D" stroke-width="1"/>
+          <circle cx="65" cy="65" r="48" fill="#E85D5D" opacity="0.08"/>
+          <text x="65" y="50" text-anchor="middle" fill="#E85D5D" font-size="9" font-weight="bold" letter-spacing="2" font-family="Arial">CERTIFIED</text>
+          <text x="65" y="73" text-anchor="middle" fill="#E85D5D" font-size="22" font-weight="bold" font-family="Georgia">HT</text>
+          <text x="65" y="92" text-anchor="middle" fill="#E85D5D" font-size="8" letter-spacing="1.5" font-family="Arial">${d.getFullYear()}</text>
+          <!-- Decorative stars -->
+          <text x="35" y="70" fill="#E85D5D" font-size="10">★</text>
+          <text x="89" y="70" fill="#E85D5D" font-size="10">★</text>
+        </svg>
+      </div>
+
+      <!-- Signature (right) -->
+      <div style="text-align: center; flex: 1;">
+        <div style="
+          font-family: 'Brush Script MT', 'Lucida Handwriting', cursive;
+          font-size: 32px;
+          color: #0E3A2F;
+          font-style: italic;
+          padding-bottom: 4px;
+          border-bottom: 1.5px solid #0E3A2F;
+          display: inline-block;
+          padding: 0 30px 6px;
+        ">Škoda Taiwan</div>
+        <div style="font-size: 11px; color: #5a6b66; letter-spacing: 0.3em; margin-top: 8px;">AUTHORIZED SIGNATURE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cert No -->
+  <div style="
+    position: absolute;
+    top: 75px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: #5a6b66;
+    letter-spacing: 0.2em;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
+  ">CERT NO. ${certNo}</div>
+</div>
+`;
+}
+
+function generateCertNo(rec) {
+  const d = new Date(rec.finishedAt);
+  const ymd = `${d.getFullYear()}${two(d.getMonth() + 1)}${two(d.getDate())}`;
+  // Use record id (or hash) for uniqueness
+  const idPart = (rec.id || String(Date.now())).split('_')[0];
+  const last5 = String(idPart).slice(-5);
+  return `HT-${ymd}-${last5}`;
 }
 
 // ============================================================
