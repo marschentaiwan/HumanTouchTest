@@ -231,16 +231,26 @@
   }
 
   .start-direct {
-    margin-top: 20px;
-    font-size: 13px;
-    color: var(--muted);
-    text-decoration: underline;
+    margin-top: 24px;
+    padding: 16px 36px;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--skoda-dark);
+    background: var(--skoda-mint);
+    border: 2px solid var(--skoda-dark);
+    border-radius: 6px;
     cursor: pointer;
-    background: none;
-    border: none;
     font-family: inherit;
+    transition: all 0.2s;
+    box-shadow: 0 6px 20px -8px rgba(14, 58, 47, 0.5);
   }
-  .start-direct:hover { color: var(--skoda-dark); }
+  .start-direct:hover {
+    background: var(--skoda-dark);
+    color: var(--skoda-mint);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 30px -8px rgba(14, 58, 47, 0.6);
+  }
 
   .admin-pill {
     position: fixed;
@@ -1193,11 +1203,6 @@
 
         <button class="btn" onclick="checkAdmin()">登入</button>
         <button class="btn btn-secondary" style="margin-top:10px;" onclick="goLanding()">返回首頁</button>
-
-        <div style="margin-top: 20px; padding: 12px; background: var(--skoda-cream); border-radius: 4px; font-size: 12px; color: var(--muted); line-height: 1.6;">
-          💡 預設密碼：<strong style="color:var(--skoda-dark);">skoda2026</strong><br>
-          建議在上線前修改 HTML 檔中的 ADMIN_PASSWORD 值
-        </div>
       </div>
     </div>
   </section>
