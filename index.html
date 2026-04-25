@@ -349,6 +349,17 @@
     background-position: right 16px center;
     padding-right: 44px;
   }
+  .field select optgroup {
+    font-weight: 700;
+    color: var(--skoda-dark);
+    background: var(--skoda-cream);
+    font-style: normal;
+  }
+  .field select option {
+    font-weight: 400;
+    color: var(--ink);
+    padding: 4px 8px;
+  }
   .field .custom-input {
     margin-top: 8px;
     display: none;
@@ -1013,31 +1024,64 @@
             <label for="location-select">據點名稱 <span class="req">*</span></label>
             <select id="location-select" onchange="onLocationChange()">
               <option value="">— 請選擇據點 —</option>
-              <option value="台北內湖">台北內湖</option>
-              <option value="台北士林">台北士林</option>
-              <option value="台北信義">台北信義</option>
-              <option value="新北板橋">新北板橋</option>
-              <option value="新北新莊">新北新莊</option>
-              <option value="桃園中壢">桃園中壢</option>
-              <option value="桃園蘆竹">桃園蘆竹</option>
-              <option value="新竹竹北">新竹竹北</option>
-              <option value="苗栗頭份">苗栗頭份</option>
-              <option value="台中北屯">台中北屯</option>
-              <option value="台中南屯">台中南屯</option>
-              <option value="台中大雅">台中大雅</option>
-              <option value="彰化員林">彰化員林</option>
-              <option value="雲林斗六">雲林斗六</option>
-              <option value="嘉義嘉義">嘉義嘉義</option>
-              <option value="台南永康">台南永康</option>
-              <option value="台南仁德">台南仁德</option>
-              <option value="高雄鼓山">高雄鼓山</option>
-              <option value="高雄鳳山">高雄鳳山</option>
-              <option value="高雄仁武">高雄仁武</option>
-              <option value="屏東屏東">屏東屏東</option>
-              <option value="宜蘭羅東">宜蘭羅東</option>
-              <option value="花蓮花蓮">花蓮花蓮</option>
-              <option value="台東台東">台東台東</option>
-              <option value="總公司">總公司</option>
+              <optgroup label="鈞銓">
+                <option value="鈞銓文心服務廠">鈞銓文心服務廠</option>
+                <option value="鈞銓文心展間">鈞銓文心展間</option>
+                <option value="鈞銓彰化服務廠">鈞銓彰化服務廠</option>
+                <option value="鈞銓彰化展間">鈞銓彰化展間</option>
+                <option value="鈞銓南屯服務廠">鈞銓南屯服務廠</option>
+                <option value="鈞銓五權展間">鈞銓五權展間</option>
+              </optgroup>
+              <optgroup label="金元三">
+                <option value="金元三新莊服務廠">金元三新莊服務廠</option>
+                <option value="金元三新莊展間">金元三新莊展間</option>
+                <option value="金元三中和服務廠">金元三中和服務廠</option>
+                <option value="金元三中和展間">金元三中和展間</option>
+              </optgroup>
+              <optgroup label="永驊">
+                <option value="永驊鳯山服務廠">永驊鳯山服務廠</option>
+                <option value="永驊鳯山展間">永驊鳯山展間</option>
+                <option value="永驊永康服務廠">永驊永康服務廠</option>
+                <option value="永驊永康展間">永驊永康展間</option>
+                <option value="永驊民族服務廠">永驊民族服務廠</option>
+                <option value="永驊民族展間">永驊民族展間</option>
+                <option value="永驊台南展間">永驊台南展間</option>
+              </optgroup>
+              <optgroup label="永昇">
+                <option value="永昇平鎮服務廠">永昇平鎮服務廠</option>
+                <option value="永昇中山服務廠">永昇中山服務廠</option>
+              </optgroup>
+              <optgroup label="榮陞">
+                <option value="榮陞桃園展間">榮陞桃園展間</option>
+                <option value="榮陞平鎮展間">榮陞平鎮展間</option>
+              </optgroup>
+              <optgroup label="晉暘">
+                <option value="晉暘服務廠">晉暘服務廠</option>
+              </optgroup>
+              <optgroup label="思科達">
+                <option value="思科達北區服務廠">思科達北區服務廠</option>
+                <option value="思科達北區展間">思科達北區展間</option>
+              </optgroup>
+              <optgroup label="喬順">
+                <option value="喬順民生展間">喬順民生展間</option>
+                <option value="喬順承德展間">喬順承德展間</option>
+              </optgroup>
+              <optgroup label="吉揚">
+                <option value="吉揚竹北服務廠">吉揚竹北服務廠</option>
+                <option value="吉揚竹北展間">吉揚竹北展間</option>
+                <option value="吉揚新竹服務廠">吉揚新竹服務廠</option>
+                <option value="吉揚新竹展間">吉揚新竹展間</option>
+              </optgroup>
+              <optgroup label="原莊">
+                <option value="原莊服務廠">原莊服務廠</option>
+                <option value="原莊展間">原莊展間</option>
+              </optgroup>
+              <optgroup label="偕聖">
+                <option value="偕聖豐原服務廠">偕聖豐原服務廠</option>
+                <option value="偕聖豐原展間">偕聖豐原展間</option>
+                <option value="偕聖沙鹿服務廠">偕聖沙鹿服務廠</option>
+                <option value="偕聖沙鹿展間">偕聖沙鹿展間</option>
+              </optgroup>
               <option value="__other__">✏️ 其他（自行輸入）</option>
             </select>
             <input type="text" id="location-custom" class="custom-input" placeholder="請輸入據點名稱" maxlength="30">
