@@ -1212,7 +1212,7 @@
   <section class="screen" id="screen-admin">
     <div class="admin-wrap">
       <div class="admin-head">
-        <h1><small>Škoda · Human Touch · 超級管理員</small>考試成績管理後台 <span id="cloud-status" style="font-size: 12px; font-weight: 400; margin-left: 12px;">☁️ 連線中...</span></h1>
+        <h1><small>Škoda · Human Touch · 超級管理員</small>考試成績管理後台 <span id="cloud-status" style="font-size: 12px; font-weight: 400; margin-left: 12px;">🔄 連線中...</span></h1>
         <div class="admin-actions">
           <button class="btn btn-secondary" onclick="renderAdmin()">🔄 重新整理</button>
           <button class="btn btn-accent" onclick="exportExcel()">📊 下載 Excel</button>
@@ -1290,6 +1290,7 @@ const firebaseConfig = {
 let fbApp = null;
 let fbDb = null;
 let firebaseReady = false;
+let firebaseInitFailed = false;
 
 async function initFirebase() {
   try {
@@ -1303,11 +1304,13 @@ async function initFirebase() {
     // Expose the functions we need
     window._fb = { collection, addDoc, getDocs, query, orderBy, serverTimestamp };
     firebaseReady = true;
+    firebaseInitFailed = false;
     console.log("✅ Firebase 連線成功");
     updateCloudStatus(true);
   } catch (e) {
     console.error("⚠️ Firebase 初始化失敗，將改用本機儲存：", e);
     firebaseReady = false;
+    firebaseInitFailed = true;
     updateCloudStatus(false);
   }
 }
@@ -1315,12 +1318,15 @@ async function initFirebase() {
 function updateCloudStatus(online) {
   const el = document.getElementById('cloud-status');
   if (!el) return;
-  if (online) {
+  if (online === 'connecting') {
+    el.innerHTML = '🔄 連線中...';
+    el.style.color = 'var(--skoda-accent)';
+  } else if (online) {
     el.innerHTML = '☁️ 雲端已連線';
     el.style.color = 'var(--skoda-mint)';
   } else {
-    el.innerHTML = '⚠️ 僅本機儲存';
-    el.style.color = 'var(--skoda-accent)';
+    el.innerHTML = '⚠️ 雲端連線失敗（請檢查網路後重新整理）';
+    el.style.color = 'var(--skoda-red)';
   }
 }
 
@@ -2092,7 +2098,21 @@ function saveLocalRecord(rec) {
   }
 }
 
+// Wait until Firebase is ready (or timeout). Returns true if ready.
+async function waitForFirebase(timeoutMs = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (firebaseReady && fbDb && window._fb) return true;
+    if (firebaseInitFailed) return false;
+    await new Promise(r => setTimeout(r, 100));
+  }
+  return firebaseReady;
+}
+
 async function getAllRecords() {
+  // Wait for Firebase to be ready before deciding
+  await waitForFirebase();
+
   // Try cloud first
   if (firebaseReady && fbDb && window._fb) {
     try {
@@ -2104,6 +2124,10 @@ async function getAllRecords() {
         const data = doc.data();
         records.push({ id: doc.id, ...data });
       });
+      // Sync local cache from cloud (so local is always in sync)
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      } catch (e) { /* ignore quota errors */ }
       return records;
     } catch (e) {
       console.error('從雲端讀取失敗，改用本機資料：', e);
@@ -2143,11 +2167,10 @@ async function saveRecord(rec) {
 }
 
 async function clearResults() {
-  if (!confirm('⚠️ 確定要清空本機所有考試紀錄嗎？\n此動作無法復原！\n\n※ 雲端資料需前往 Firebase Console 手動刪除')) return;
-  if (!confirm('再次確認：真的要刪除本機考生成績嗎？')) return;
+  if (!confirm('⚠️ 確定要清空本機快取嗎？\n\n📌 此動作只會清除本機的暫存資料\n📌 雲端 Firebase 的成績不會被刪除\n📌 重新整理後會自動從雲端載回\n\n要繼續嗎？')) return;
   localStorage.removeItem(STORAGE_KEY);
   await renderAdmin();
-  alert('已清空本機紀錄（雲端紀錄不受影響）');
+  alert('✅ 已清空本機快取\n（雲端資料完整保留，已從雲端重新載入）');
 }
 
 // ============================================================
@@ -2155,7 +2178,13 @@ async function clearResults() {
 // ============================================================
 async function renderAdmin() {
   const tbody = document.getElementById('admin-tbody');
-  tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">⏳</div>載入中...</div></td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">⏳</div>正在從雲端載入考試紀錄...</div></td></tr>`;
+
+  // Show loading state on stats too
+  document.getElementById('ad-total').textContent = '...';
+  document.getElementById('ad-pass').textContent = '...';
+  document.getElementById('ad-avg').textContent = '...';
+  document.getElementById('ad-rate').textContent = '...';
 
   const all = await getAllRecords();
 
